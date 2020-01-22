@@ -1,7 +1,11 @@
 # classifyr.R
 # rebuilding the classifier
 
-
+library(imputeTS)
+library(pdist)
+library(padr)
+library(dtw)
+library(data.table)
 
 # Distance metric -----
 
@@ -373,7 +377,7 @@ preprocess_cgm = function(m, gap='90 min', cgm_freq="5 min") {
   padm = pad( thickened )
 
   # Swap columns after padding
-  setcolorder(padm, colnames(padm)[c(thick_idx, 1:(thick_idx-1))])
+  data.table::setcolorder(padm, colnames(padm)[c(thick_idx, 1:(thick_idx-1))])
 
   # Make sure glucose values are numeric
   padm[,2] = as.numeric(padm[[2]])

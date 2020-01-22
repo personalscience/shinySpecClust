@@ -3,6 +3,9 @@
 
 library(ggplot2)
 library(lubridate)
+#library(tidyverse)
+
+
 library(xts)
 
 source("classifyr.R")
@@ -10,7 +13,10 @@ source("classifyr.R")
 sample_file <- "sample_cgm.tsv"
 axisTitle = "Glucose (mg/dL)"
 windowsF= "rawDexcomSeries+overlap_37+window_2.5+user_all"
-TRAIN_WINDOWS = fread(windowsF)
+
+TRAIN_WINDOWS = readr::read_delim(windowsF, delim = "\t")
+
+# TRAIN_WINDOWS = fread(windowsF)
 PARAM_LIST = list(train_mean = 100, train_sd = 1, Y = c(1,2,3))
 
 load("train.overlap_37+window_2.5.params.Rdata")
@@ -40,12 +46,12 @@ s_cgm_df <- read_cgmF(sample_file)
 
 # dygraph of raw cgm values
 # generates this in Javascript (with the dygraph library)
-dygraph_cgm = renderDygraph({
-  if (is.null(v$data)) return()
-  df = v$data
-  dygraph(df_to_xts(df), ylab=axisTitle) %>%
-    dyOptions(axisLabelWidth=90, useDataTimezone = TRUE)
-})
+# dygraph_cgm = renderDygraph({
+#   if (is.null(v$data)) return()
+#   df = v$data
+#   dygraph(df_to_xts(df), ylab=axisTitle) %>%
+#     dyOptions(axisLabelWidth=90, useDataTimezone = TRUE)
+# })
 
 
 
@@ -74,4 +80,5 @@ glucotype_table <- function (cgm, train_windows = TRAIN_WINDOWS, param_list = PA
 # this line will render a dygraph
 # dygraph(df_to_xts(s_cgm_df), ylab=axisTitle)
 
-glucotype_table(s_cgm_df)
+gt <- glucotype_table(s_cgm_df)
+gt %>% fortify.zoo()
