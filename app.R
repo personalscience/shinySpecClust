@@ -1,3 +1,5 @@
+
+# Packages ------
 library(shiny)
 library(DT)
 library(dygraphs)
@@ -62,7 +64,7 @@ spinnerUI = tags$img(src="loading_spinner.gif",
 
 
 # ~~~~~~~~~
-# UI
+# UI ----
 # ~~~~~~~~~
 
 ui <- fluidPage(
@@ -150,6 +152,7 @@ ui <- fluidPage(
 		)
 	),
 
+	### dygraphContainer ----
 	fluidRow(
 		column(12,
 			tags$div(id = "dygraphContainer",
@@ -165,6 +168,7 @@ ui <- fluidPage(
 
 	br(),
 
+  ### cgmTable ------
 	fluidRow(
 		column(5,
 			div(DT::dataTableOutput("cgmTable"),
@@ -182,7 +186,7 @@ ui <- fluidPage(
 
 
 # ~~~~~~~~~~~~~~~~
-# SERVER
+# SERVER -----
 # ~~~~~~~~~~~~~~~~
 # Define server logic
 server <- function(input, output, session) {
