@@ -2,6 +2,120 @@
 # rebuilding the classifier
 
 
+
+# Distance metric -----
+
+# Compute affinity matrix from distance
+affMatrix = function(train_dist, train_means, alpha) {
+  # train_dist is a distance matrix
+  # is symmetric in the case of the training
+  # for testing the size mxn, where m is
+  # the number of testing examples and n is
+  # the number of examples in the training
+  # Have to decide if keeping columns as training
+  # or reshaping the matrix
+  return (t(   # Have to transpose for sapply
+    sapply(1:nrow(train_dist), function(x) {
+      Sig = (train_means[x]+train_means)/3 +
+        train_dist[x,]/3 + .Machine$double.eps;
+      return( dnorm(train_dist[x,], 0, alpha*Sig))
+    }
+    )
+  )
+  )}
+
+
+
+# Get representative points from kmeans
+sample_training = function(Y, kM, N) {
+  # Y are the standardized eigenVectors
+  # kM are the results from k-means
+  # N is the number of final examples
+  #
+  # Compute the distance between
+  # eigenVectors and each center
+  set.seed(1234)
+  dk = as.matrix(pdist(Y, kM$centers))
+  l = kM$cluster
+  idx = unlist(
+    sapply(unique(l), function(x)
+      sample(which(l==x), ceiling(mean(l==x)*N),
+             prob=dk[cbind(1:length(l), l)][l==x])
+    )
+  )
+  return (idx)
+}
+
+
+.discretisation <- function(eigenVectors) {
+
+  normalize <- function(x) x / sqrt(sum(x^2))
+  eigenVectors = t(apply(eigenVectors,1,normalize))
+
+  n = nrow(eigenVectors)
+  k = ncol(eigenVectors)
+
+  R = matrix(0,k,k)
+  R[,1] = t(eigenVectors[round(n/2),])
+
+  mini <- function(x) {
+    i = which(x == min(x))
+    return(i[1])
+  }
+
+  c = matrix(0,n,1)
+  for (j in 2:k) {
+    c = c + abs(eigenVectors %*% matrix(R[,j-1],k,1))
+    i = mini(c)
+    R[,j] = t(eigenVectors[i,])
+  }
+
+  lastObjectiveValue = 0
+  for (i in 1:20) {
+    eigenDiscrete = .discretisationEigenVectorData(eigenVectors %*% R)
+
+    svde = svd(t(eigenDiscrete) %*% eigenVectors)
+    U = svde[['u']]
+    V = svde[['v']]
+    S = svde[['d']]
+
+    NcutValue = 2 * (n-sum(S))
+    if(abs(NcutValue - lastObjectiveValue) < .Machine$double.eps)
+      break
+
+    lastObjectiveValue = NcutValue
+    R = V %*% t(U)
+
+  }
+
+  return(list(discrete=eigenDiscrete,continuous =eigenVectors))
+}
+
+.discretisationEigenVectorData <- function(eigenVector) {
+
+  Y = matrix(0,nrow(eigenVector),ncol(eigenVector))
+  maxi <- function(x) {
+    i = which(x == max(x))
+    return(i[1])
+  }
+  j = apply(eigenVector,1,maxi)
+  Y[cbind(1:nrow(eigenVector),j)] = 1
+
+  return(Y)
+
+}
+
+
+# Apply .discretisation function from SNFtool package
+get_labels = function(Y) {
+  eigDiscrete = .discretisation(Y)
+  eigDiscrete = eigDiscrete$discrete
+  labels = apply(eigDiscrete, 1, which.max)
+  centers = as.matrix(aggregate(Y, mean, by=list(labels))[,-1])
+  kM = list(cluster=labels, centers=centers)
+  return (kM)
+}
+
 # Classification -----
 
 # Apply .discretisation function from SNFtool package
@@ -13,6 +127,20 @@ get_labels = function(Y) {
   kM = list(cluster=labels, centers=centers)
   return (kM)
 }
+
+define_glucotypes = function(train) {
+  # Give labels to clusters based on the mean
+  # of the training windows
+  levels = c("low", "moderate", "severe")
+  means = apply(train$train, 1, mean)
+  glucotypes = factor(levels[order(
+    aggregate(means, median,
+              by=list(train$train_labels))$x)],
+    levels = levels
+  )
+  return(glucotypes)
+}
+
 
 # Intervals -----
 
@@ -77,6 +205,71 @@ interval_to_5_mins = function(interval) {
 
 # Windows -----
 
+reshape_test_windows = function(test, train) {
+  glucotypes = define_glucotypes(train)
+  df = cbind(test$cgm_w_windows[,c(4,5)],
+             glucotype = glucotypes[ test$test_labels[
+               test$cgm_w_windows[["windowId"]] ]
+               ]
+  )
+  cast_formula = as.formula( paste(
+    colnames(df)[1], "~glucotype"))
+  ts = as.xts.data.table(dcast.data.table(
+    data.table(na.omit(df)),
+    cast_formula,
+    value.var="GlucoseValue", mean)
+  )
+  return(ts)
+}
+
+
+prepare_test_windows = function(test_windows, param_list) {
+  # Prepare test set from windows rather than from cgm profile
+  test = list()
+  test$windowID = test_windows[[1]]
+  test$test = test_windows[,-1]
+  # Scale baed on train parameters
+  test$test = scale_windows(test$test,
+                            param_list$train_mean, param_list$train_sd)
+  # Smooth windows individually
+  test$test = t(apply(test$test, 1, smooth_windows))
+  # prepare labels for classification
+  test$test_labels = rowSums(test$test)
+  return(test)
+}
+
+predict_windows = function(test, train) {
+  # Classification of windows
+  #
+  # Compute normalization factors for DTW
+  test_CE = apply(test$test, 1, function(x) sqrt(sum(diff(x)^2)))
+  # --- Check how long this will take for larger training ---
+  test_CF = outer(test_CE, train$train_CE, Vectorize( function(x,y)
+    return(max(x,y)/min(x,y))))
+  # This is very slow,
+  # consider moving to python fastDTW
+  shakoechiba_window_size = round(ncol(train$train)*0.1, 0)
+  test_dist = dtwDist(test$test, train$train, window.type = "sakoechiba",
+                      window.size = shakoechiba_window_size, step.pattern = symmetric2) * test_CF
+
+  # Compute affinity matrix for testing
+  B = affMatrix(test_dist, train$train_means, 0.5)
+
+  # Project on eigenfunctions
+  f = B %*% train$train_Y
+  # Normalize eigenfunctions
+  f = f/sqrt(rowSums(f^2))
+
+  # This computes the distance to the k-means
+  # centers on the transformed space
+  test_labels_na_omit = apply(tcrossprod(f, train$centers),
+                              1, which.max)
+  # Restore NAs
+  test$test_labels[!is.na(test$test_labels)] = test_labels_na_omit
+  #df = merge(melt(as.matrix(test)), as.data.frame(test_labels), by.x="Var1", by.y='row.names')
+  #ggplot(na.omit(df), aes(Var2, value)) + geom_line(aes(group=Var1, color=test_labels)) + facet_wrap(~test_labels)
+  return(test)
+}
 
 # Scale windows based on pre-computed
 # mean and standard deviation

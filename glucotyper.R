@@ -13,6 +13,10 @@ windowsF= "rawDexcomSeries+overlap_37+window_2.5+user_all"
 TRAIN_WINDOWS = fread(windowsF)
 PARAM_LIST = list(train_mean = 100, train_sd = 1, Y = c(1,2,3))
 
+load("train.overlap_37+window_2.5.params.Rdata")
+PARAM_LIST = param_list
+rm(param_list)
+
 
 read_cgmF = function(f) {
   df = tryCatch( {
@@ -63,6 +67,7 @@ glucotype_table <- function (cgm, train_windows = TRAIN_WINDOWS, param_list = PA
     df = fread(cachedF)
     df = as.xts.data.table(df[,Index:=ymd_hms(Index)])
   }
+  df
 }
 
 
