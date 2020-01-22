@@ -24,8 +24,8 @@ df_to_xts = function(df) {
 
 # Dygraph parameters
 alpha = 0.5
-colors = paste("rgba(", apply( rbind( 
-	col2rgb(rev(hue_pal()(3))), 
+colors = paste("rgba(", apply( rbind(
+	col2rgb(rev(hue_pal()(3))),
 	alpha=rep(alpha, 3)), 2, paste,
 	collapse=","), ")"
 )
@@ -34,8 +34,8 @@ axisTitle = "Glucose (mg/dL)"
 glucotypes = c("low", "moderate", "severe")
 
 # Spinner image
-spinnerUI = tags$img(src="loading_spinner.gif", 
-	alt="spinner", 
+spinnerUI = tags$img(src="loading_spinner.gif",
+	alt="spinner",
 	id="spinner",
 	style ="position:absolute; margin: auto; z-index:2"
 )
@@ -55,7 +55,7 @@ spinnerUI = tags$img(src="loading_spinner.gif",
 #					document.getElementById('dygraphContainer').prepend(elem);
 #					console.log(document.getElementById('dygraphContainer'));
 #				}
-#				
+#
 #			})"
 
 
@@ -94,31 +94,31 @@ ui <- fluidPage(
 
 	title = "CGM viewer",
 	HTML("
-		<div style='display: flex'> 
+		<div style='display: flex'>
 			<h1 style='align-self: center; flex-grow: 1'>CGM viewer</h1>
-			<img style='width:auto; max-height: 80px; margin: 3rem' 
-				src='Stanford_Medicine_logo-web-CS.trim.png' alt='logo'>
+			<img style='width:auto; max-height: 80px; margin: 3rem'
+				src='psi-LogoOnly.png' alt='logo'>
 		</div>
 	"),
 
-	
+
 	# Controls
 	fluidRow(
 
-		column(4, 
+		column(4,
 			HTML("<p>
-			Visualize your CGM profile and discover your glucotype! 
+			Visualize your CGM profile and discover your glucotype!
 			This webpage provides an interface to the glucotype classification
 			described in <a href='https://journals.plos.org/plosbiology/article?id=10.1371/journal.pbio.2005143'
-			target='_blank'>Hall et al</a>. 
+			target='_blank'>Hall et al</a>.
 			To find out about your glucotype please upload a tab-delimited
 			file with two columns, containing the time of measurement and
-			the glucose concentration, following the format in 
+			the glucose concentration, following the format in
 			<a href='sample.cgm.tsv' target='_blank'>this sample file</a>.
-			</p> 
+			</p>
 			")
 		),
-		
+
 		column(3,
 			style="margin-left: 4rem;",
 			fileInput(inputId = "cgmF",
@@ -131,13 +131,13 @@ ui <- fluidPage(
 			),
 
 			tags$label("or    "),
-			
+
 			actionButton(inputId = "showSample",
 				"Visualize sample profile"
 			)
 		),
 
-		column(2, 
+		column(2,
 
 			actionButton(inputId = "glucotype",
 				"Classify glucotype",
@@ -147,9 +147,9 @@ ui <- fluidPage(
 			),
 			br(),
 			uiOutput(outputId = "verdict")
-		)	
+		)
 	),
-	
+
 	fluidRow(
 		column(12,
 			tags$div(id = "dygraphContainer",
@@ -166,7 +166,7 @@ ui <- fluidPage(
 	br(),
 
 	fluidRow(
-		column(5, 
+		column(5,
 			div(DT::dataTableOutput("cgmTable"),
 				style = "overflow-y:scroll; max-height:300px; max-width: 100%")
 		),
@@ -189,12 +189,12 @@ server <- function(input, output, session) {
 
 	print("Restart")
 
-	# Read 	
+	# Read
 	read_cgmF = function(f) {
 		df = tryCatch( {
-			read.table(f, sep='\t', h=T, quote="")}, 
-			error=function(e) 
-			read.table(f, sep='\t', 
+			read.table(f, sep='\t', h=T, quote="")},
+			error=function(e)
+			read.table(f, sep='\t',
 				fileEncoding="UTF-16LE", h=T, quote="")
 		)
 		df[[1]] = ymd_hms(df[[1]])
@@ -217,7 +217,7 @@ server <- function(input, output, session) {
 
 	# table of raw cgm values
 	output[['cgmTable']] = DT::renderDataTable({
-		DT::datatable(v$data, 
+		DT::datatable(v$data,
 			options = list())
 	})
 
@@ -232,8 +232,8 @@ server <- function(input, output, session) {
 	# Description for dygraph navigation commands
 	output[["dygraphDesc"]] = renderUI({
 		if (is.null(v$data)) return()
-		tags$p("Zoom: click-drag; Pan: shift-click-drag; 
-		Restore zoom level: double-click", 
+		tags$p("Zoom: click-drag; Pan: shift-click-drag;
+		Restore zoom level: double-click",
 		style="text-align: center; color: grey")
 	})
 
@@ -246,17 +246,17 @@ server <- function(input, output, session) {
 		print("Compute glucotype")
 		print(head(cgm))
 		insertUI("#dygraphContainer", where="afterBegin",
-			tags$div("Computing.... Please be patient", id="spinnerBg", 
+			tags$div("Computing.... Please be patient", id="spinnerBg",
 				style="position: absolute; vertical-align: middle;
-				background-color:rgba(200,200,200,0.4); 
-				z-index:10; width:100%; height:100%"), 
+				background-color:rgba(200,200,200,0.4);
+				z-index:10; width:100%; height:100%"),
 			immediate=TRUE, session=session);
-#		insertUI("#dygraphContainer", where="afterBegin", 
+#		insertUI("#dygraphContainer", where="afterBegin",
 #			tags$div(id="spinnerBg", style="position:absolute;
-#				background-color:rgba(200,200,200,0.4); 
-#				z-index:10; width:100%; height:100%"), 
+#				background-color:rgba(200,200,200,0.4);
+#				z-index:10; width:100%; height:100%"),
 #			immediate=TRUE, session=session);
-#		insertUI("#dygraphContainer", where="afterBegin", 
+#		insertUI("#dygraphContainer", where="afterBegin",
 #			spinnerUI, immediate=TRUE, session=session);
 
 		cachedF = "glucotypes.df.tsv"
@@ -289,7 +289,7 @@ server <- function(input, output, session) {
 			dyOptions(colors=plot_colors, drawPoints=T, pointSize=2)
 		})
 		# Table with glucotype frequencies
-		freq = data.frame("Fraction of time" = 
+		freq = data.frame("Fraction of time" =
 				#colMeans(!is.na(df)), check.names=F)
 				as.matrix(prop.table(table(DT$label))), check.names=F)
 		output[["glucotypeTable"]] = renderTable(
@@ -314,7 +314,7 @@ server <- function(input, output, session) {
 }
 
 shinyOptions = list(
-	port = 8000, 
+	port = 8000,
 	launch.browser = T
 )
 
