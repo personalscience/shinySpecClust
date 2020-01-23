@@ -3,7 +3,7 @@
 To generate a glucotype file, run the following from the command line:
 
 ```sh
-rscript glucotyper.R
+glucotyper.r --file sprague_glucose.tsv | more
 ```
 
 You'll get something whose first few lines look like this:
@@ -13,18 +13,18 @@ You'll get something whose first few lines look like this:
 pad applied on the interval: 5 min
 [1] "Prepare training"
 [1] "Predicting"
-                   Index   low moderate  severe
-1    2016-06-01 00:00:00   NaN      NaN 176.500
-2    2016-06-01 00:05:00   NaN      NaN 197.590
-3    2016-06-01 00:10:00   NaN      NaN 207.410
-4    2016-06-01 00:15:00   NaN      NaN 211.450
+                   Index       low  moderate    severe
+1    2018-12-04 14:00:00       NaN       NaN  97.95000
+2    2018-12-04 14:05:00       NaN       NaN  98.48000
+3    2018-12-04 14:10:00       NaN       NaN 100.50000
+4    2018-12-04 14:15:00       NaN       NaN 103.43000
 ```
 
 Pipe the output to a text file if you like.
 
-**Next: I'll add something so you can give it command line parameters.**
 
-Running the script `upload_glucotype_to_db.R` will write the results to the database configured in `config.yml` (which has passwords in it and is *not* included in this repo -- you'll need to make one yourself)
+Note quite: the following no longer works properly, since it relies on `glucotyper.R` which is now an executable.
+> Running the script `upload_glucotype_to_db.R` will write the results to the database configured in `config.yml` (which has passwords in it and is *not* included in this repo -- you'll need to make one yourself)
 
 
 
@@ -36,4 +36,5 @@ The core `glucotyper.R` script is designed to run standalone (without the Shiny 
 
 * `classifyR.R`: all of the functions called by the glucotyper app.
 * `train.overlap_37+window_2.5.params.Rdata` training data that loads the important variable `param_list`.
-* 
+
+

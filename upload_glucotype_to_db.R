@@ -29,7 +29,10 @@ con <- DBI::dbConnect(drv = conn_args$driver,
 
 source("glucotyper.R")  # brings in new XTS frame 'gt'
 
-new_records <- gt %>% fortify.zoo() %>% as_tibble() %>% dplyr::rename(timeStart = Index) %>% mutate(user = 1230)
-DBI::dbWriteTable(con, name = "glucotype_records", value = new_records, row.names = FALSE, overwrite = TRUE)
+gt %>% dplyr::rename(timeStart = Index) %>% as_tibble() %>% mutate(user = as.integer(1234))
 
+#new_records <- gt %>% fortify.zoo() %>% as_tibble() %>% dplyr::rename(timeStart = Index) %>% mutate(user = 1234)
+new_records <- gt %>% dplyr::rename(timeStart = Index) %>% as_tibble() %>% mutate(user = as.integer(1234))
+DBI::dbWriteTable(con, name = "glucotype_records", value = new_records, row.names = FALSE, append = TRUE)
 
+DBI::dbDisconnect(con)

@@ -1,11 +1,11 @@
 # classifyr.R
 # rebuilding the classifier
 
-library(imputeTS)
-library(pdist)
-library(padr)
-library(dtw)
-library(data.table)
+suppressPackageStartupMessages(library(imputeTS))
+suppressPackageStartupMessages(library(pdist))
+suppressPackageStartupMessages(library(padr))
+suppressPackageStartupMessages(library(dtw))
+suppressPackageStartupMessages(library(data.table))
 
 # Distance metric -----
 
